@@ -1,4 +1,5 @@
 import { App } from "@modelcontextprotocol/ext-apps";
+import { escapeHtml, formatDuration } from "./utils.js";
 
 interface TestCase {
   id: number;
@@ -49,18 +50,7 @@ const app = new App(
 // Track step states
 const steps: Map<number, StepState> = new Map();
 
-function escapeHtml(str: string): string {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
-}
-
-function formatDuration(ms: number): string {
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(1)}s`;
-}
-
-function renderStep(step: StepState): string {
+export function renderStep(step: StepState): string {
   const statusClass = step.status || "running";
   const targetDisplay = step.target || step.value || "";
   const badges: string[] = [];
@@ -97,7 +87,7 @@ function renderStep(step: StepState): string {
   return html;
 }
 
-function updateStepsList(): void {
+export function updateStepsList(): void {
   const stepsList = document.getElementById("steps");
   if (!stepsList) return;
 
@@ -105,7 +95,7 @@ function updateStepsList(): void {
   stepsList.innerHTML = sortedSteps.map(renderStep).join("");
 }
 
-function processEvent(event: SSEEvent): void {
+export function processEvent(event: SSEEvent): void {
   switch (event.type) {
     case "run_started":
       // Initialize UI
@@ -145,7 +135,7 @@ function processEvent(event: SSEEvent): void {
   }
 }
 
-function showSummary(): void {
+export function showSummary(): void {
   const summary = document.getElementById("summary");
   const summaryIcon = document.getElementById("summaryIcon");
   const summaryTitle = document.getElementById("summaryTitle");
@@ -177,7 +167,7 @@ function showSummary(): void {
   if (totalDuration) totalDuration.textContent = formatDuration(duration);
 }
 
-function processToolResult(data: TestRunnerData): void {
+export function processToolResult(data: TestRunnerData): void {
   const loading = document.getElementById("loading");
   const stepsList = document.getElementById("steps");
   const errorDiv = document.getElementById("error");

@@ -11,8 +11,10 @@ RUN npm ci
 
 # Copy source files
 COPY tsconfig.json ./
+COPY vite.config.ts ./
 COPY server.ts ./
 COPY src/ ./src/
+COPY ui-src/ ./ui-src/
 
 # Build TypeScript
 RUN npm run build

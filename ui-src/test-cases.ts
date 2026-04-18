@@ -1,4 +1,5 @@
 import { App } from "@modelcontextprotocol/ext-apps";
+import { escapeHtml } from "./utils.js";
 
 interface TestCase {
   id: number;
@@ -53,7 +54,7 @@ async function runTest(testCaseId: number, testName: string): Promise<void> {
 }
 
 // Render test cases grid
-function renderTestCases(data: TestCasesData): void {
+export function renderTestCases(data: TestCasesData): void {
   const loading = document.getElementById("loading");
   const testCasesGrid = document.getElementById("testCases");
   const errorDiv = document.getElementById("error");
@@ -131,12 +132,6 @@ function renderTestCases(data: TestCasesData): void {
       });
     });
   }
-}
-
-function escapeHtml(str: string): string {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
 }
 
 // Handle tool result notification

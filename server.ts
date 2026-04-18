@@ -13,11 +13,11 @@
 import "dotenv/config";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
-import express from "express";
-import { readFileSync } from "fs";
 import { z } from "zod";
 import { CheckmateClient } from "./src/checkmate-client.js";
-import { serverLogger, toolLogger, resourceLogger, apiLogger } from "./src/logger.js";
+import { serverLogger, toolLogger, resourceLogger } from "./src/logger.js";
+import { loadUI } from "./src/load-ui.js";
+import { createApp } from "./src/app.js";
 import type { SSEEvent, TestStep } from "./src/types.js";
 
 serverLogger.info("Starting Checkmate MCP Server...");
@@ -34,17 +34,6 @@ const client = new CheckmateClient(CHECKMATE_URL);
 // =============================================================================
 // Load UI HTML Files
 // =============================================================================
-
-function loadUI(filename: string): string {
-  try {
-    const html = readFileSync(`./ui/${filename}`, "utf-8");
-    serverLogger.debug({ filename }, "Loaded UI file");
-    return html;
-  } catch (e) {
-    serverLogger.error({ filename, error: e }, "Failed to load UI file");
-    return `<!DOCTYPE html><html><body><h1>UI not found: ${filename}</h1></body></html>`;
-  }
-}
 
 const PROJECTS_UI = loadUI("projects.html");
 const TEST_CASES_UI = loadUI("test-cases.html");
@@ -423,166 +412,13 @@ server.registerTool(
 // Express Server Setup
 // =============================================================================
 
-const expressApp = express();
-expressApp.disable("x-powered-by");
-expressApp.use(express.json());
+const expressApp = createApp(client, CHECKMATE_URL);
 
-// Health check endpoint
-expressApp.get("/health", async (_req, res) => {
-  const checkmateHealthy = await client.healthCheck();
-  res.json({
-    status: "ok",
-    name: "checkmate-mcp",
-    checkmate: checkmateHealthy ? "connected" : "unavailable",
-    checkmateUrl: CHECKMATE_URL,
-  });
-});
-
-// =============================================================================
-// SSE Proxy Endpoints (to avoid CORS issues with MCP App iframe)
-// =============================================================================
-
-// Validation schemas for proxy endpoints
-const browserSchema = z.enum(["chromium", "chromium-headless", "firefox", "firefox-headless", "webkit", "webkit-headless"]).optional();
-
-const testCaseRunSchema = z.object({
-  browser: browserSchema,
-});
-
-const executeStepsSchema = z.object({
-  project_id: z.number().int().positive(),
-  steps: z.array(z.string()).min(1),
-  browser: browserSchema,
-  fixture_ids: z.array(z.number().int().positive()).optional(),
-});
-
-// Proxy for test case execution SSE
-expressApp.post("/proxy/test-cases/:testCaseId/runs/stream", async (req, res) => {
-  const testCaseId = parseInt(req.params.testCaseId, 10);
-  if (isNaN(testCaseId) || testCaseId <= 0) {
-    res.status(400).json({ error: "Invalid testCaseId: must be a positive integer" });
-    return;
-  }
-
-  const bodyResult = testCaseRunSchema.safeParse(req.body);
-  if (!bodyResult.success) {
-    res.status(400).json({ error: "Invalid request body", details: bodyResult.error.issues });
-    return;
-  }
-  const { browser } = bodyResult.data;
-
-  apiLogger.info({ endpoint: "proxy/test-cases/stream", testCaseId, browser }, "SSE proxy request");
-
-  try {
-    const response = await fetch(`${CHECKMATE_URL}/api/test-cases/${testCaseId}/runs/stream`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "text/event-stream",
-      },
-      body: JSON.stringify({ browser: browser || "chromium-headless" }),
-    });
-
-    if (!response.ok) {
-      res.status(response.status).json({ error: `Checkmate API error: ${response.statusText}` });
-      return;
-    }
-
-    // Set SSE headers
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.flushHeaders();
-
-    // Pipe the response
-    const reader = response.body?.getReader();
-    if (!reader) {
-      res.end();
-      return;
-    }
-
-    const pump = async () => {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        res.write(value);
-      }
-      res.end();
-    };
-
-    req.on("close", () => {
-      reader.cancel();
-    });
-
-    await pump();
-  } catch (error) {
-    apiLogger.error({ endpoint: "proxy/test-cases/stream", testCaseId, error }, "SSE proxy error");
-    res.status(500).json({ error: error instanceof Error ? error.message : "Proxy error" });
-  }
-});
-
-// Proxy for execute steps SSE (natural language tests)
-expressApp.post("/proxy/test-runs/execute/stream", async (req, res) => {
-  const bodyResult = executeStepsSchema.safeParse(req.body);
-  if (!bodyResult.success) {
-    res.status(400).json({ error: "Invalid request body", details: bodyResult.error.issues });
-    return;
-  }
-  const { project_id, steps, browser, fixture_ids } = bodyResult.data;
-
-  apiLogger.info({ endpoint: "proxy/test-runs/stream", projectId: project_id, stepCount: steps.length }, "SSE proxy request");
-
-  try {
-    const response = await fetch(`${CHECKMATE_URL}/api/test-runs/execute/stream`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "text/event-stream",
-      },
-      body: JSON.stringify({ project_id, steps, browser, fixture_ids }),
-    });
-
-    if (!response.ok) {
-      res.status(response.status).json({ error: `Checkmate API error: ${response.statusText}` });
-      return;
-    }
-
-    // Set SSE headers
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-    res.flushHeaders();
-
-    // Pipe the response
-    const reader = response.body?.getReader();
-    if (!reader) {
-      res.end();
-      return;
-    }
-
-    const pump = async () => {
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        res.write(value);
-      }
-      res.end();
-    };
-
-    req.on("close", () => {
-      reader.cancel();
-    });
-
-    await pump();
-  } catch (error) {
-    apiLogger.error({ endpoint: "proxy/test-runs/stream", projectId: project_id, error }, "SSE proxy error");
-    res.status(500).json({ error: error instanceof Error ? error.message : "Proxy error" });
-  }
-});
+// Health check and SSE proxy routes are provided by createApp (src/app.ts).
 
 // MCP endpoint
 expressApp.post("/mcp", async (req, res) => {
-  apiLogger.debug({ endpoint: "/mcp", method: req.body?.method }, "MCP request received");
+  serverLogger.debug({ endpoint: "/mcp", method: req.body?.method }, "MCP request received");
 
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,

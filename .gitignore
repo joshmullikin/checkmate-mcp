@@ -24,3 +24,4 @@ npm-debug.log*
 
 # Claude
 CLAUDE.md
+.claude/settings.local.json

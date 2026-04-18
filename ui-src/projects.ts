@@ -1,4 +1,5 @@
 import { App } from "@modelcontextprotocol/ext-apps";
+import { escapeHtml } from "./utils.js";
 
 interface Project {
   id: number;
@@ -46,7 +47,7 @@ async function viewProject(projectId: number, projectName: string): Promise<void
 }
 
 // Render projects grid
-function renderProjects(data: ProjectsData): void {
+export function renderProjects(data: ProjectsData): void {
   const loading = document.getElementById("loading");
   const projectsGrid = document.getElementById("projects");
   const errorDiv = document.getElementById("error");
@@ -117,12 +118,6 @@ function renderProjects(data: ProjectsData): void {
       });
     });
   }
-}
-
-function escapeHtml(str: string): string {
-  const div = document.createElement("div");
-  div.textContent = str;
-  return div.innerHTML;
 }
 
 // Handle tool result notification

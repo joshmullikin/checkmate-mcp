@@ -9,6 +9,8 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "npm run build:ui && tsc",
+    "test": "vitest run --config vitest.config.ts",
+    "test:watch": "vitest --config vitest.config.ts",
     "build:ui": "npm run build:ui:projects && npm run build:ui:test-cases && npm run build:ui:test-runner && npm run build:ui:cleanup",
     "build:ui:projects": "INPUT=ui-src/projects.html vite build && mv ui/ui-src/projects.html ui/projects.html",
     "build:ui:test-cases": "INPUT=ui-src/test-cases.html vite build && mv ui/ui-src/test-cases.html ui/test-cases.html",
@@ -27,10 +29,14 @@
   "devDependencies": {
     "@modelcontextprotocol/ext-apps": "^1.0.1",
     "@types/express": "^5.0.6",
+    "@types/jsdom": "^28.0.1",
     "@types/node": "^22.0.0",
+    "@vitest/coverage-v8": "^4.1.4",
+    "jsdom": "^29.0.2",
     "tsx": "^4.19.0",
     "typescript": "^5.7.0",
     "vite": "^7.3.1",
-    "vite-plugin-singlefile": "^2.3.0"
+    "vite-plugin-singlefile": "^2.3.0",
+    "vitest": "^4.1.4"
   }
 }
