@@ -1,5 +1,5 @@
 # Build stage
-FROM cgr.dev/chainguard/node:22-dev AS builder
+FROM node:24-slim AS builder
 
 WORKDIR /app
 
@@ -20,15 +20,20 @@ COPY ui-src/ ./ui-src/
 RUN npm run build
 
 # Production stage
-FROM cgr.dev/chainguard/node:22
+FROM node:24-slim
 
 WORKDIR /app
+
+# Run as non-root
+RUN groupadd -r app && useradd -r -g app app
 
 # Copy built files and dependencies
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 COPY ui/ ./ui/
+
+USER app
 
 # Expose port
 EXPOSE 3003
