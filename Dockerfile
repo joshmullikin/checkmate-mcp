@@ -19,6 +19,9 @@ COPY ui-src/ ./ui-src/
 # Build TypeScript
 RUN npm run build
 
+# Remove dev dependencies before copying node_modules to runtime image
+RUN npm prune --omit=dev
+
 # Production stage
 FROM node:24-slim
 
