@@ -1,5 +1,5 @@
 # Build stage
-FROM node:24-slim AS builder
+FROM cgr.dev/chainguard/node:latest-dev AS builder
 
 WORKDIR /app
 
@@ -20,27 +20,21 @@ COPY ui-src/ ./ui-src/
 RUN npm run build
 
 # Remove dev dependencies before copying node_modules to runtime image
+# (Chainguard builder runs as non-root; temporarily escalate to prune)
+USER root
 RUN npm prune --omit=dev
+USER node
 
 # Production stage
-FROM node:24-slim
+FROM cgr.dev/chainguard/node:latest
 
 WORKDIR /app
-
-# Run as non-root
-RUN groupadd -r app && useradd -r -g app app
 
 # Copy built files and dependencies
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 COPY ui/ ./ui/
-
-# Runtime only needs node + app files; remove package-manager tooling and its bundled deps.
-RUN rm -rf /usr/local/lib/node_modules/npm \
-	&& rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
-
-USER app
 
 # Expose port
 EXPOSE 3003
