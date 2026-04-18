@@ -37,7 +37,7 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: OSV dependency scan
-        uses: google/osv-scanner-action@v1
+        uses: google/osv-scanner-action@v2.3.5
         with:
           scan-args: |-
             --lockfile=package-lock.json
@@ -47,7 +47,7 @@ jobs:
           npx license-checker --production --failOn "GPL;AGPL;LGPL;SSPL;BUSL" --summary
 
       - name: Trivy filesystem scan
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           scan-type: fs
           scan-ref: .
@@ -103,7 +103,7 @@ jobs:
           tags: local/checkmate-mcp:${{ github.sha }}
 
       - name: Trivy image scan (blocking)
-        uses: aquasecurity/trivy-action@0.24.0
+        uses: aquasecurity/trivy-action@v0.35.0
         with:
           image-ref: local/checkmate-mcp:${{ github.sha }}
           severity: HIGH,CRITICAL
