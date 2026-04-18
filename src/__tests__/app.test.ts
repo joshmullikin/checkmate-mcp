@@ -16,13 +16,13 @@ const mockClient = {
 // Injectable mock fetcher
 // ---------------------------------------------------------------------------
 
-const mockFetcher = vi.fn<Parameters<typeof fetch>, ReturnType<typeof fetch>>();
+const mockFetcher = vi.fn();
 
 // ---------------------------------------------------------------------------
 // Server lifecycle
 // ---------------------------------------------------------------------------
 
-const app = createApp(mockClient, "http://checkmate.test", mockFetcher);
+const app = createApp(mockClient, "http://checkmate.test", mockFetcher as unknown as typeof fetch);
 const httpServer = createServer(app);
 let baseUrl: string;
 

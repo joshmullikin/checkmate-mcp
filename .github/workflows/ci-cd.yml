@@ -37,10 +37,12 @@ jobs:
         run: npm audit --audit-level=high
 
       - name: OSV dependency scan
-        uses: google/osv-scanner-action@v2.3.5
-        with:
-          scan-args: |-
-            --lockfile=package-lock.json
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" \
+            -w /src \
+            ghcr.io/google/osv-scanner:v2.3.5 \
+            scan --lockfile=package-lock.json
 
       - name: Check for disallowed licenses
         run: |
