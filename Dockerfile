@@ -36,6 +36,10 @@ COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/package.json ./
 COPY ui/ ./ui/
 
+# Runtime only needs node + app files; remove package-manager tooling and its bundled deps.
+RUN rm -rf /usr/local/lib/node_modules/npm \
+	&& rm -f /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack
+
 USER app
 
 # Expose port
