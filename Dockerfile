@@ -39,5 +39,9 @@ COPY ui/ ./ui/
 # Expose port
 EXPOSE 3003
 
+HEALTHCHECK --interval=10s --timeout=5s --start-period=15s --retries=3 \
+  CMD ["node", "-e", "fetch('http://localhost:3003/health').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+
 # Start the server (env vars passed via docker run -e or --env-file)
-CMD ["node", "dist/server.js"]
+# Chainguard sets ENTRYPOINT ["/usr/bin/node"]; pass only the script path here
+CMD ["dist/server.js"]
